@@ -9,15 +9,15 @@ After the corners detected, we only delete all corners outside of the detection 
 How does it work ?
 The two powerfull algorithms return the psition of each corner of the image. We delete all corners which are outside of the detection zone and after:
 
-## 1
+## 1.
 In the rest of the script, averages represent position of electrical component centers.
 The first detected corner represent the first average.
 
-## 2
+## 2.
 After, we compare this first average with the second corner. If both are closed, we stock the sum of both and the number (of corners) they are on the sum (in a way to make a average at the end) here 2. If both aren't close enough (based on a simple interval) we create a new "average" composed by this second corner value.
 We repeat the second step for all corners in the detection zone. In fact, we do not want to create a lot of new averages (because they reprsent a component) each time the tested corner isn't close to the fisrt average, so we parcour all the averages and if the tesed corner isn't close to any averages, we coonsidere as a new one (and by the way as a new component).
 
-## 3
+## 3.
 We can now add the found averages on the preview image and watch the result.
 
 ## précision regarding the camera
