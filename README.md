@@ -1,4 +1,4 @@
-# TrackingElectricalComponent
+# Tracking Electrical Component
 Projet 3A Sigma. Track Electrical component using an OAK-D POE camera
 
 This script is using tow powerfull algorithms to detect corners on an image : Harris and Shi-tomasi.
