@@ -6,6 +6,9 @@ After the corners detected, we only delete all corners outside of the detection 
 
 ![Screenshot from 2022-12-08 15-00-07](https://user-images.githubusercontent.com/90550358/206523758-843f8b7d-4c24-45c6-9367-f38c8150c3bf.png)
 
+How does it work ?
+The two powerfull algorithms return the psition of each corner of the image. We delete all corners which are outside of the detection zone and after:
+
 ## 1
 In the rest of the script, averages represent position of electrical component centers.
 The first detected corner represent the first average.
