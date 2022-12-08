@@ -7,8 +7,8 @@ After the corners detected, we only delete all corners outside of the detection 
 ![Screenshot from 2022-12-08 15-00-07](https://user-images.githubusercontent.com/90550358/206523758-843f8b7d-4c24-45c6-9367-f38c8150c3bf.png)
 
 ## 1
-In the rest, averages represent the position of electrical component centers.
-The fist detected corner represent the first averge.
+In the rest of the script, averages represent position of electrical component centers.
+The first detected corner represent the first average.
 
 ## 2
 After, we compare this first average with the second corner. If both are closed, we stock the sum of both and the number (of corners) they are on the sum (in a way to make a average at the end) here 2. If both aren't close enough (based on a simple interval) we create a new "average" composed by this second corner value.
@@ -25,4 +25,4 @@ The main issus it that the two cameras aren't at the same position. If we want t
 
 ## Precision regarding averages at the end
 
-If you understand how the algorithm work, after tested all corners, each average represent an electrical component. In reality, it isn't realy the case because some time, little (are very long) pins of a component can be interpreted by the script as a component. To avoid this issue, at the end of the computation we only keep averages composed by a minimum of corner values
+If you understand how the algorithm work, after tested all corners, each average represent an electrical component. In reality, it isn't realy the case because some time, little (and very long) pins of a component can be interpreted by the script as a component. To avoid this issue, at the end of the computation we only keep averages composed by a minimum of corner values
