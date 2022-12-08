@@ -4,10 +4,25 @@ from turtle import left
 import cv2
 import depthai as dai
 
-
+# Paramters
 ############################################
 detection_intervale_x = [273, 430]
-detection_intervale_y = [81, 326]
+detection_intervale_y = [100, 200]
+
+# permit to use the two camera as one
+# depend of the distance between the comera and the belt, need to be reset if the distance change.
+# to setup it, put a peace of paper in front of the camera, the offsets corespond the difference between
+# position of the corner in the tow axis
+offset_on_x = 244 - 165
+offset_on_y = 52 - 54
+
+
+# a feature will be assiciated with an component(average) if the distance between both is +-borne_x on x and +-borne_y on y
+borne_x = 22
+borne_y = 22
+
+# number of features to consider as a component
+nbr_feat = 3
 ############################################
 
 
@@ -40,7 +55,8 @@ monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
 # Disable optical flow
 featureTrackerLeft.initialConfig.setMotionEstimator(False)
-featureTrackerRight.initialConfig.setMotionEstimator(False)
+featureTrackerRight.initialConfig.setMotionEstimator(False)#########
+
 
 # Linking
 monoLeft.out.link(featureTrackerLeft.inputImage)
@@ -70,56 +86,104 @@ with dai.Device(pipeline) as device:
 
     leftWindowName = "left"
     rightWindowName = "right"
+    combineWindowName = "combination of left and right result"
 
+# transform the right feature in a left feature to compare
+    def transformation(features):
+        for feature in features:
+            feature.position.x += offset_on_x
+            feature.position.y += offset_on_y
+        return features
 
 # identify electrical component
     def componentDectector(features):
         retained_features = []
-        compoent_centers = []
-        # First we retain only the feature in the chosen intervale
+        component_centers = []
+        averages = [] #tab of averages corresponding to different components [sum x, sum y, value number in the sum]
+        # First we retain only the feature in the chosen interval
         for feature in features:
-            print(int(feature.position.x), int(feature.position.y))
-            if (273 < int(feature.position.x) and int(feature.position.x) < 430 and 81 < int(feature.position.y) and int(feature.position.y) < 326):
-                print(int(feature.position.x), int(feature.position.y))
+            if (detection_intervale_x[0] < int(feature.position.x) and int(feature.position.x) < detection_intervale_x[1] and detection_intervale_y[0] < int(feature.position.y) and int(feature.position.y) < detection_intervale_y[1]):
                 retained_features.append(feature)
-        print(retained_features)
+        averages.append([retained_features[0].position.x, retained_features[0].position.y, 1])
+
         for feature in retained_features:
-            average_x = 0
-            average_y = 0
-            average_x += feature.position.x
-            average_y += feature.position.y
-        average_x /= len(retained_features)
-        average_y /= len(retained_features)
+            for i in range(len(averages)):
+                if feature.position.x > averages[i][0]/averages[i][2] - borne_x and feature.position.x < averages[i][0]/averages[i][2] + borne_x and feature.position.y > averages[i][1]/averages[i][2]  - borne_y and feature.position.y < averages[i][1]/averages[i][2] + borne_y:
+                    averages[i][0] += feature.position.x
+                    averages[i][1] += feature.position.y
+                    averages[i][2] +=1
+                    break
 
-        compoent_centers.append([average_x, average_y])
+                elif i == len(averages)-1:
+                    averages.append([feature.position.x, feature.position.y, 1])
+                    break
+
+        for compontent_center in averages:
+            if compontent_center[2] >= nbr_feat:
+                component_centers.append([compontent_center[0]/compontent_center[2], compontent_center[1]/compontent_center[2]])
+
+        return component_centers
+
+# transform the right feature in a left feature to compare
+    def transformation_inverse(component_centers):
+        for component_center in component_centers:
+            component_center[0] -= offset_on_x
+            component_center[1] -= offset_on_y
+        return component_centers
+
+    def drawFeatures(frame, component_centers, show):
+        circleRadius = 1
+        for i, component_center in enumerate(component_centers):
+            # print(component_center[0], component_center[1])
+            cv2.rectangle(frame, (int(component_center[0]+10), int(component_center[1]+10)), (int(component_center[0]-10), int(component_center[1]-10)), color = (0, 0, 255), thickness = 1)
+            cv2.circle(frame, (int(component_center[0]), int(component_center[1])), circleRadius, color = (0, 0, 255))
+            cv2.putText(frame, text = str(i), org = (int(component_center[0]-10), int(component_center[1]-11)), fontFace= 1, fontScale = 1, color = (0, 0, 255), thickness = 1)
+
         
-        return compoent_centers
-
-    def drawFeatures(frame, compoent_centers):
-        pointColor = (0, 0, 255)
-        circleRadius = 2
-        for compoent_center in compoent_centers:
-            cv2.circle(frame, compoent_center[0], compoent_center[1], circleRadius, pointColor, -1, cv2.LINE_AA, 0)
-            print(compoent_center[0], compoent_center[1])
+        if show:
+            for i, component_center in enumerate(component_centers):
+                print("=================================================================")
+                print("Liste des composants détéctés:")
+                print("")
+                print("Composant " + str(i) + ":")
+                print("Coordonnées du centre en pixels: [" + str(int(component_center[0])) + "," + str(int(component_center[1])) + "]")
+                print("")
+            print("=================================================================")
+            print("")
 
     while True:
         inPassthroughFrameLeft = passthroughImageLeftQueue.get()
         passthroughFrameLeft = inPassthroughFrameLeft.getFrame()
         leftFrame = cv2.cvtColor(passthroughFrameLeft, cv2.COLOR_GRAY2BGR)
 
-        #inPassthroughFrameRight = passthroughImageRightQueue.get()
-        #passthroughFrameRight = inPassthroughFrameRight.getFrame()
-        #rightFrame = cv2.cvtColor(passthroughFrameRight, cv2.COLOR_GRAY2BGR)
+        inPassthroughFrameRight = passthroughImageRightQueue.get()
+        passthroughFrameRight = inPassthroughFrameRight.getFrame()
+        rightFrame = cv2.cvtColor(passthroughFrameRight, cv2.COLOR_GRAY2BGR)
+
+        inPassthroughFrameLeft = passthroughImageLeftQueue.get()
+        passthroughFrameLeft = inPassthroughFrameLeft.getFrame()
+        combineFrame = cv2.cvtColor(passthroughFrameLeft, cv2.COLOR_GRAY2BGR)
 
         trackedFeaturesLeft = outputFeaturesLeftQueue.get().trackedFeatures
-        drawFeatures(leftFrame, componentDectector(trackedFeaturesLeft))
+        drawFeatures(leftFrame, componentDectector(trackedFeaturesLeft), show = False)
 
-        #trackedFeaturesRight = outputFeaturesRightQueue.get().trackedFeatures
-        #drawFeatures(rightFrame, trackedFeaturesRight)
+        trackedFeaturesRight = outputFeaturesRightQueue.get().trackedFeatures
+        drawFeatures(rightFrame, transformation_inverse(componentDectector(transformation(trackedFeaturesRight))), show = False)
+
+        drawFeatures(combineFrame, componentDectector(trackedFeaturesLeft + trackedFeaturesRight), show = False)
+
+        # draw the detection zone
+        cv2.line(combineFrame, (detection_intervale_x[0], detection_intervale_y[0]), (detection_intervale_x[0], detection_intervale_y[1]), color = (255, 0, 0), thickness = 1)
+        cv2.line(combineFrame, (detection_intervale_x[1], detection_intervale_y[0]), (detection_intervale_x[1], detection_intervale_y[1]), color = (255, 0, 0), thickness = 1)
+        cv2.line(combineFrame, (detection_intervale_x[0], detection_intervale_y[0]), (detection_intervale_x[1], detection_intervale_y[0]), color = (255, 0, 0), thickness = 1)
+        cv2.line(combineFrame, (detection_intervale_x[0], detection_intervale_y[1]), (detection_intervale_x[1], detection_intervale_y[1]), color = (255, 0, 0), thickness = 1)
+        cv2.putText(combineFrame, text = "Detection zone", org = (detection_intervale_x[0], detection_intervale_y[0]-3), fontFace= 1, fontScale = 1, color = (255, 0, 0), thickness = 1)
+
 
         # Show the frame
         cv2.imshow(leftWindowName, leftFrame)
-        #cv2.imshow(rightWindowName, rightFrame)
+        cv2.imshow(rightWindowName, rightFrame)
+        cv2.imshow(combineWindowName, combineFrame)
 
         key = cv2.waitKey(1)
         if key == ord('q'):
