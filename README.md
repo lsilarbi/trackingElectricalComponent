@@ -1,6 +1,10 @@
 # Tracking Electrical Component
 Projet 3A Sigma. Track Electrical component using an OAK-D POE camera
 
+Camera documentation : https://docs.luxonis.com/projects/hardware/en/latest/pages/SJ2088POE.html
+
+Github scripts : https://github.com/luxonis/depthai-python.git
+
 This script is using tow powerfull algorithms to detect corners on an image : Harris and Shi-tomasi.
 After the corners detected, we only delete all corners outside of the detection zone. Like that, we better control what is going on.
 
