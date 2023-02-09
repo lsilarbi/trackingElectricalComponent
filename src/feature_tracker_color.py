@@ -7,7 +7,8 @@ import time
 
 # Paramters
 ############################################
-detection_intervale_x = [440, 840]
+detection_intervale_x = [120, 860]
+# 355 mm pour 740 
 detection_intervale_y = [160, 560]
 
 # a feature will be assiciated with an component(average) if the distance between both is +-borne_x on x and +-borne_y on y
@@ -15,7 +16,10 @@ borne_x = 50
 borne_y = 50
 
 # number of features to consider as a component
-nbr_feat = 30
+nbr_feat = 50
+
+# decalage vitesse du tapis
+decalage = 35
 ############################################
 
     
@@ -90,14 +94,14 @@ class FeatureTrackerDrawer:
             if component_center[2] >= nbr_feat:
                 cx = component_center[0]/component_center[2]
                 cy = component_center[1]/component_center[2]
-                cv2.circle(img, (int(cx), int(cy)), circleRadius, color = (255, 0, 0), thickness = -1)
-                cv2.putText(img, text = str(i), org = (int(cx-10), int(cy-11)), fontFace= 1, fontScale = 1, color = (0, 0, 255), thickness = 1)
+                cv2.circle(img, (int(cx), int(cy+decalage)), circleRadius, color = (0, 0, 255), thickness = -1)
+                cv2.putText(img, text = str(i), org = (int(cx-10), int(cy-11+decalage)), fontFace= 1, fontScale = 1, color = (0, 0, 255), thickness = 1)
                 if show:
                     print("=================================================================")
                     print("Liste des composants détéctés:")
                     print("")
                     print("Composant " + str(i) + ":")
-                    print("Coordonnées du centre en pixels: [" + str(int(cx)) + "," + str(int(cy)) + "]")
+                    print("Coordonnées du centre en pixels: [" + str(round(int(cx-detection_intervale_x[0])*0.355/740, 3)) + "," + str(round(int(cy+decalage-detection_intervale_y[0])*0.355/740, 3)) + "]")
                     print("")
                     print("=================================================================")
                     print("")
@@ -170,7 +174,7 @@ with dai.Device(pipeline) as device:
 
         trackedFeaturesColor = outputFeaturesColorQueue.get().trackedFeatures
         colorFeatureDrawer.trackFeaturePath(trackedFeaturesColor)
-        colorFeatureDrawer.componentDectector(colorFrame, show = False)
+        colorFeatureDrawer.componentDectector(colorFrame, show = True)
 
        # draw the detection zone
         cv2.line(colorFrame, (detection_intervale_x[0], detection_intervale_y[0]), (detection_intervale_x[0], detection_intervale_y[1]), color = (255, 0, 0), thickness = 1)

@@ -6,8 +6,9 @@ import depthai as dai
 
 # Paramters
 ############################################
-detection_intervale_x = [273, 430]
-detection_intervale_y = [100, 200]
+detection_intervale_x = [160, 450]
+# 340mm = 290
+detection_intervale_y = [10, 380]
 
 # permit to use the two camera as one
 # depend of the distance between the comera and the belt, need to be reset if the distance change.
@@ -22,7 +23,10 @@ borne_x = 22
 borne_y = 22
 
 # number of features to consider as a component
-nbr_feat = 3
+nbr_feat = 5
+
+# decalage dû à la vitesse d'avance du tapis
+decalage = 20
 ############################################
 
 
@@ -135,7 +139,7 @@ with dai.Device(pipeline) as device:
         circleRadius = 1
         for i, component_center in enumerate(component_centers):
             # print(component_center[0], component_center[1])
-            cv2.rectangle(frame, (int(component_center[0]+10), int(component_center[1]+10)), (int(component_center[0]-10), int(component_center[1]-10)), color = (0, 0, 255), thickness = 1)
+            cv2.rectangle(frame, (int(component_center[0]+10), int(component_center[1]+decalage+10)), (int(component_center[0]-10), int(component_center[1]+decalage-10)), color = (0, 0, 255), thickness = 1)
             cv2.circle(frame, (int(component_center[0]), int(component_center[1])), circleRadius, color = (0, 0, 255))
             cv2.putText(frame, text = str(i), org = (int(component_center[0]-10), int(component_center[1]-11)), fontFace= 1, fontScale = 1, color = (0, 0, 255), thickness = 1)
 
@@ -146,7 +150,7 @@ with dai.Device(pipeline) as device:
                 print("Liste des composants détéctés:")
                 print("")
                 print("Composant " + str(i) + ":")
-                print("Coordonnées du centre en pixels: [" + str(int(component_center[0])) + "," + str(int(component_center[1])) + "]")
+                print("Coordonnées du centre en pixels: [" + str(round(int(component_center[0]-detection_intervale_x[0])*0.340/290, 3)) + "," + str(round(int(component_center[1]+decalage-detection_intervale_y[0])*0.340/290, 3)) + "]")
                 print("")
             print("=================================================================")
             print("")
@@ -164,13 +168,16 @@ with dai.Device(pipeline) as device:
         passthroughFrameLeft = inPassthroughFrameLeft.getFrame()
         combineFrame = cv2.cvtColor(passthroughFrameLeft, cv2.COLOR_GRAY2BGR)
 
-        trackedFeaturesLeft = outputFeaturesLeftQueue.get().trackedFeatures
-        drawFeatures(leftFrame, componentDectector(trackedFeaturesLeft), show = False)
+        try:
+            trackedFeaturesLeft = outputFeaturesLeftQueue.get().trackedFeatures
+            drawFeatures(leftFrame, componentDectector(trackedFeaturesLeft), show = False)
 
-        trackedFeaturesRight = outputFeaturesRightQueue.get().trackedFeatures
-        drawFeatures(rightFrame, transformation_inverse(componentDectector(transformation(trackedFeaturesRight))), show = False)
+            trackedFeaturesRight = outputFeaturesRightQueue.get().trackedFeatures
+            drawFeatures(rightFrame, transformation_inverse(componentDectector(transformation(trackedFeaturesRight))), show = False)
 
-        drawFeatures(combineFrame, componentDectector(trackedFeaturesLeft + trackedFeaturesRight), show = False)
+            drawFeatures(combineFrame, componentDectector(trackedFeaturesLeft + trackedFeaturesRight), show = True)
+        except:
+            pass
 
         # draw the detection zone
         cv2.line(combineFrame, (detection_intervale_x[0], detection_intervale_y[0]), (detection_intervale_x[0], detection_intervale_y[1]), color = (255, 0, 0), thickness = 1)
@@ -181,8 +188,8 @@ with dai.Device(pipeline) as device:
 
 
         # Show the frame
-        cv2.imshow(leftWindowName, leftFrame)
-        cv2.imshow(rightWindowName, rightFrame)
+        #cv2.imshow(leftWindowName, leftFrame)
+        #cv2.imshow(rightWindowName, rightFrame)
         cv2.imshow(combineWindowName, combineFrame)
 
         key = cv2.waitKey(1)
